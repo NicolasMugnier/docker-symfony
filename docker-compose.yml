@@ -1,0 +1,62 @@
+version: '3.9'
+
+services:
+  php:
+    build: ./docker/php
+    hostname: "symfony"
+    container_name: php-sf
+    volumes:
+      - ./app:/var/www/html
+      #- vendor:/var/www/html/vendor
+    environment:
+      - DATABASE_HOST
+      - DATABASE_PORT
+      - DATABASE_NAME
+      - DATABASE_USER
+      - DATABASE_PASSWORD
+    links:
+      - postgres
+      - redis
+
+  nginx:
+    build: ./docker/nginx
+    container_name: nginx-sf
+    hostname: nginx
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.symfony.rule=Host(`symfony.lan`)"
+      - "traefik.http.routers.symfony.entrypoints=web"
+    depends_on:
+      - php
+    volumes:
+      - ./app:/usr/share/nginx/html
+    links:
+      - php
+
+  redis:
+    image: redis:alpine
+    container_name: redis-sf
+    hostname: redis
+    ports:
+      - "6379:6379"
+
+  postgres:
+    image: postgres:latest
+    environment:
+      POSTGRES_PASSWORD: password
+      POSTGRES_USER: ms_course
+      POSTGRES_DB: mc_course
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  vendor: ~
+  pgdata: ~
+
+networks:
+  default:
+    external:
+      name: toolkit_default
